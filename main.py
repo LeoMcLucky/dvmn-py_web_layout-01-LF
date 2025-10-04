@@ -1,20 +1,58 @@
 import datetime
 import pandas
 import collections
+import argparse
+from environs import Env
+
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-COMPANY_BIRTH = datetime.datetime(year=1920, month=1, day=1, hour=1)
+COMPANY_BIRTH = 1920
+
+
+def parse_input():
+
+    env = Env()
+    env.read_env()
+
+    default_excel_path = env.str("EXCEL_PATH", "beverages.xlsx")
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Эта программа запускает сайт магазина вина 'Новое русское вино'.\n"
+            "Для использования своего Excel-файла можно указать путь прямо в командной строке.\n"
+            "Если путь не указан, программа берет его из .env или по умолчанию 'beverages.xlsx'.\n\n"
+            "Примеры:\n"
+            "python main.py\n"
+            "python main.py your_path/your_file.xlsx\n"
+        ),
+        epilog=(
+            "В .env можно задать:\n"
+            "EXCEL_PATH=your_path/your_file.xlsx\n"
+            "Если не задано — будет использован 'beverages.xlsx'."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        "excel_path",
+        help="Путь к Excel-файлу (если не указан — из .env или 'beverages.xlsx')",
+        nargs="?",
+        default=default_excel_path
+    )
+
+    args = parser.parse_args()
+    return args.excel_path
 
 
 def get_company_age(company_birth):
     now = datetime.datetime.now()
-    company_age = now.year-company_birth.year
+    company_age = now.year-company_birth
     return company_age
 
 
-def years_word(company_age):
+def get_year_word(company_age):
     if 11 <= company_age % 100 <= 14:
         word = "лет"
     else:
@@ -28,9 +66,9 @@ def years_word(company_age):
     return word
 
 
-def get_drinks(file_exel):
+def get_drinks(exel_path):
     assortment_drinks = pandas.read_excel(
-        file_exel, na_values=[], keep_default_na=False).to_dict(orient='records')
+        exel_path, na_values=[], keep_default_na=False).to_dict(orient='records')
 
     orderly_assortment_drinks = collections.defaultdict(list)
     for drink in assortment_drinks:
@@ -40,7 +78,7 @@ def get_drinks(file_exel):
 
 
 def main():
-    file_xlsx = 'wine3.xlsx'
+    exel_path = parse_input()
     company_age = get_company_age(COMPANY_BIRTH)
 
     env = Environment(
@@ -52,8 +90,8 @@ def main():
 
     rendered_page = template.render(
         cap_company_age=company_age,
-        cap_years_word=years_word(company_age),
-        assortment_drinks=get_drinks(file_xlsx)
+        cap_years_word=get_year_word(company_age),
+        assortment_drinks=get_drinks(exel_path)
     )
 
     with open('index.html', 'w', encoding="utf8") as file:
