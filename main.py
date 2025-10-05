@@ -11,12 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 COMPANY_BIRTH = 1920
 
 
-def parse_input():
-
-    env = Env()
-    env.read_env()
-
-    default_excel_path = env.str("EXCEL_PATH", "beverages.xlsx")
+def parse_input(default_excel_path):
 
     parser = argparse.ArgumentParser(
         description=(
@@ -78,7 +73,12 @@ def get_drinks(exel_path):
 
 
 def main():
-    exel_path = parse_input()
+
+    env_config = Env()
+    env_config.read_env()
+    default_excel_path = env_config.str("EXCEL_PATH", "beverages.xlsx")
+    exel_path = parse_input(default_excel_path)
+
     company_age = get_company_age(COMPANY_BIRTH)
 
     env = Environment(
